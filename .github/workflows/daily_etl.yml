@@ -1,0 +1,37 @@
+name: Daily IHSG ETL
+
+# TRIGGER: When to run?
+on:
+  schedule:
+    # Run at 10:00 UTC everyday (which is 5:00 PM WIB / Jakarta Time)
+    - cron: '0 10 * * *'
+  # Allow us to run it manually to test it
+  workflow_dispatch:
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the code from the repo
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Install Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # 3. Install Libraries (yfinance, pandas, etc.)
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # 4. Run the Script
+      - name: Run ETL Pipeline
+        env:
+          # This injects the secret we saved in Step 4 into the script
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python etl_pipeline.py
