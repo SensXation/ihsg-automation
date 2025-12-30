@@ -30,4 +30,5 @@ Instead of updating data manually, this system uses **GitHub Actions** to run a 
    ```
 
    pip install -r requirements.txt
+   
    streamlit run dashboard.py
