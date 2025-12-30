@@ -12,7 +12,7 @@ try:
     DB_URL = secrets.get("db_url") 
 except FileNotFoundError:
     print("❌ Could not find .streamlit/secrets.toml")
-    DB_URL = None
+    DB_URL = os.getenv("DATABASE_URL")
 
 if not DB_URL:
     raise ValueError("❌ DB_URL not found! Check your .streamlit/secrets.toml file.")
