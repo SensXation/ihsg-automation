@@ -4,9 +4,6 @@
 ![Streamlit](https://img.shields.io/badge/Streamlit-App-red)
 ![Status](https://img.shields.io/badge/Status-Automated-green)
 
-### 🔴 [Live Dashboard Demo](https://ihsg-tracker.streamlit.app/)
-*(Click the link above to see the live project)*
-
 ---
 
 ## 📝 About The Project
