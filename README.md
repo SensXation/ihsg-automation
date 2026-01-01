@@ -23,12 +23,11 @@ Instead of updating data manually, this system uses **GitHub Actions** to run a 
 * **Supabase** (Cloud Database)
 * **Streamlit** (Frontend Dashboard)
 
+
 ## 🚀 How to Run Locally
-1. Clone the repo:
+1. **Clone the repo**
    ```bash
    git clone [https://github.com/SensXation/ihsg-automation.git](https://github.com/SensXation/ihsg-automation.git)
-   ```
+   cd ihsg-automation
 
-   pip install -r requirements.txt
-   
-   streamlit run dashboard.py
+ 
