@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine
 import plotly.express as px
+import toml
 
 # 1. SETUP PAGE
 st.set_page_config(page_title="IHSG Automated Dashboard", layout="wide")

@@ -5,7 +5,7 @@ import toml
 import os
 from datetime import datetime
 
-# --- CONFIGURATION ---
+
 
 try:
     secrets = toml.load(".streamlit/secrets.toml")
@@ -17,7 +17,7 @@ except FileNotFoundError:
 if not DB_URL:
     raise ValueError("❌ DB_URL not found! Check your .streamlit/secrets.toml file.")
 
-# 2. Target Stocks (Updated List)
+# 2. Target Stocks 
 TICKERS = [
     'ARCI.JK', 'BBCA.JK', 'BBRI.JK', 'BMRI.JK', 'BUMI.JK', 
     'BULL.JK', 'BKSL.JK', 'GOTO.JK', 'MINA.JK', 'PANI.JK'
@@ -44,7 +44,7 @@ def extract_data(ticker_list):
                     "Close": "close", "Volume": "volume"
                 })
                 
-                # Keep only what we need
+                # Keep only what is needed
                 df = df[['date', 'ticker', 'open', 'high', 'low', 'close', 'volume']]
                 
                 # Take only the LATEST row (Today's data)
@@ -61,10 +61,9 @@ def extract_data(ticker_list):
     if all_data:
         final_df = pd.concat(all_data)
         
-        # --- NEW: ROUND NUMBERS TO 2 DECIMALS ---
         # Rounds open, high, low, close. Leaves volume as is.
         cols_to_round = ['open', 'high', 'low', 'close']
-        final_df[cols_to_round] = final_df[cols_to_round].round(2)
+        final_df[cols_to_round] = final_df[cols_to_round].round(2) 
         # ----------------------------------------
         
         return final_df

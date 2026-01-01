@@ -1,5 +1,7 @@
-yfinance
+streamlit
 pandas
+yfinance
 sqlalchemy
-psycopg2-binary
+plotly
 toml
+psycopg2-binary

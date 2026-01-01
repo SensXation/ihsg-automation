@@ -1,11 +1,19 @@
 import yfinance as yf
 import pandas as pd
 from sqlalchemy import create_engine, text
+import toml
 
-# --- CONFIGURATION ---
-DB_URL = "postgresql://postgres.qkedvgwpmblqdjbvwatf:Willsenricky123!@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres"
+# CONFIGURATION
+try:
+    secrets = toml.load(".streamlit/secrets.toml")
+    DB_URL = secrets.get("db_url")
+except FileNotFoundError:
+    DB_URL = os.getenv("DATABASE_URL")
 
-# [UPDATED] New Ticker List for Backfill
+if not DB_URL:
+    raise ValueError("❌ DB_URL not found! Pastikan ada di .streamlit/secrets.toml")
+
+# Ticker List for Backfill
 TICKERS = [
     'ARCI.JK', 'BBCA.JK', 'BBRI.JK', 'BMRI.JK', 'BUMI.JK', 
     'BULL.JK', 'BKSL.JK', 'GOTO.JK', 'MINA.JK', 'PANI.JK'
@@ -19,8 +27,7 @@ def backfill_data():
     print("🔌 Connecting to Supabase...")
     engine = create_engine(DB_URL)
     
-    # 1. CLEAN SLATE (Optional: Comment this out if you want to KEEP old data)
-    # Since you changed tickers completely, wiping it is cleaner so you don't have "dead" stocks like TLKM/BBNI mixing in.
+    # 1. CLEAN SLATE
     print("🧹 Clearing data to start fresh...")
     with engine.connect() as conn:
         conn.execute(text("TRUNCATE TABLE daily_stock_prices"))
