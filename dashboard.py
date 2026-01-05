@@ -32,19 +32,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-def render_tradingview_chart(df, ma50, ma200):
-    """Function specifically to render TradingView-style charts"""
-   
-    
-    if ma50: df['MA50'] = df['close'].rolling(window=50).mean()
-    if ma200: df['MA200'] = df['close'].rolling(window=200).mean()
-
-
+def render_tradingview_chart(df,):
     fig = make_subplots(
         rows=2, cols=1, 
         shared_xaxes=True, 
-        vertical_spacing=0.02, 
-        row_heights=[0.75, 0.25]
+        vertical_spacing=0.03, 
+        row_heights=[0.8, 0.2] 
     )
 
    
@@ -57,19 +50,18 @@ def render_tradingview_chart(df, ma50, ma200):
         showlegend=False
     ), row=1, col=1)
 
+   
 
-    if ma50:
-        fig.add_trace(go.Scatter(x=df['date'], y=df['MA50'], line=dict(color='#FF9800', width=1.5), name='MA 50'), row=1, col=1)
-    if ma200:
-        fig.add_trace(go.Scatter(x=df['date'], y=df['MA200'], line=dict(color='#2196F3', width=1.5), name='MA 200'), row=1, col=1)
-
+   
     colors = ['#26a69a' if c >= o else '#ef5350' for c, o in zip(df['close'], df['open'])]
     fig.add_trace(go.Bar(
         x=df['date'], y=df['volume'], marker_color=colors, name='Volume', opacity=0.5, showlegend=False
     ), row=2, col=1)
 
+    
     fig.update_layout(
-        margin=dict(l=10, r=10, t=10, b=10),
+        
+        margin=dict(l=10, r=10, t=40, b=10),
         
         height=600,
         template="plotly_dark",
@@ -77,8 +69,15 @@ def render_tradingview_chart(df, ma50, ma200):
         plot_bgcolor='rgba(0,0,0,0)',
         hovermode='x unified',
         
-
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, bgcolor="rgba(0,0,0,0)"),
+    
+        legend=dict(
+            orientation="h", 
+            yanchor="bottom", 
+            y=1.02, 
+            xanchor="left", 
+            x=0,         
+            bgcolor="rgba(0,0,0,0)"
+        ),
         
         xaxis_rangeslider_visible=False, 
 
@@ -90,6 +89,7 @@ def render_tradingview_chart(df, ma50, ma200):
         )
     )
     
+  
     fig.update_yaxes(gridcolor='#333333', row=1, col=1)
     fig.update_yaxes(visible=False, row=2, col=1)
     
@@ -114,8 +114,6 @@ def main():
     st.sidebar.subheader("Chart Settings")
     time_range = st.sidebar.select_slider("Time Range", options=["1M", "3M", "6M", "1Y", "All"], value="6M")
     col_ma1, col_ma2 = st.sidebar.columns(2)
-    show_ma50 = col_ma1.checkbox("MA 50", value=True)
-    show_ma200 = col_ma2.checkbox("MA 200", value=False)
 
     try:
         df = data_processor.get_stock_data(selected_real_ticker)
@@ -146,9 +144,8 @@ def main():
             
         st.divider()
 
-        chart_fig = render_tradingview_chart(df, show_ma50, show_ma200)
         
-        st.plotly_chart(chart_fig, use_container_width=True, config={'displayModeBar': True, 'displaylogo': False})
+        st.plotly_chart(use_container_width=True, config={'displayModeBar': True, 'displaylogo': False})
 
         with st.expander(f"📊 View Historical Data for {selected_display}"):
             st.dataframe(df.sort_values('date', ascending=False), use_container_width=True)
