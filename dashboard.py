@@ -25,22 +25,22 @@ st.markdown("""
     /* Metrics Styling */
     div[data-testid="stMetricValue"] { font-size: 28px !important; }
     
-    /* FIX: Agar modebar (tombol zoom) terlihat jelas dan tidak transparan */
+    /* Modebar terlihat jelas */
     .modebar-container { opacity: 0.8 !important; }
     .modebar-container:hover { opacity: 1 !important; }
 </style>
 """, unsafe_allow_html=True)
 
 
-def render_tradingview_chart(df,):
+def render_tradingview_chart(df):
+
     fig = make_subplots(
         rows=2, cols=1, 
         shared_xaxes=True, 
         vertical_spacing=0.03, 
-        row_heights=[0.8, 0.2] 
+        row_heights=[0.8, 0.2]
     )
 
-   
     fig.add_trace(go.Candlestick(
         x=df['date'],
         open=df['open'], high=df['high'], low=df['low'], close=df['close'],
@@ -51,16 +51,12 @@ def render_tradingview_chart(df,):
     ), row=1, col=1)
 
    
-
-   
     colors = ['#26a69a' if c >= o else '#ef5350' for c, o in zip(df['close'], df['open'])]
     fig.add_trace(go.Bar(
         x=df['date'], y=df['volume'], marker_color=colors, name='Volume', opacity=0.5, showlegend=False
     ), row=2, col=1)
 
-    
     fig.update_layout(
-        
         margin=dict(l=10, r=10, t=40, b=10),
         
         height=600,
@@ -68,19 +64,15 @@ def render_tradingview_chart(df,):
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         hovermode='x unified',
-        
-    
+   
         legend=dict(
             orientation="h", 
-            yanchor="bottom", 
-            y=1.02, 
-            xanchor="left", 
-            x=0,         
+            yanchor="bottom", y=1.02, 
+            xanchor="left", x=0, 
             bgcolor="rgba(0,0,0,0)"
         ),
         
         xaxis_rangeslider_visible=False, 
-
 
         modebar=dict(
             orientation='h',      
@@ -88,8 +80,7 @@ def render_tradingview_chart(df,):
             color='#ffffff'       
         )
     )
-    
-  
+   
     fig.update_yaxes(gridcolor='#333333', row=1, col=1)
     fig.update_yaxes(visible=False, row=2, col=1)
     
@@ -113,15 +104,16 @@ def main():
 
     st.sidebar.subheader("Chart Settings")
     time_range = st.sidebar.select_slider("Time Range", options=["1M", "3M", "6M", "1Y", "All"], value="6M")
-    col_ma1, col_ma2 = st.sidebar.columns(2)
-
+    
     try:
+       
         df = data_processor.get_stock_data(selected_real_ticker)
         
         if time_range != "All":
             days_map = {"1M": 30, "3M": 90, "6M": 180, "1Y": 365}
             start_date = df['date'].max() - timedelta(days=days_map[time_range])
             df = df[df['date'] >= start_date]
+
 
         price, diff, pct, is_positive = data_processor.calculate_kpi(df)
         
@@ -144,8 +136,8 @@ def main():
             
         st.divider()
 
-        
-        st.plotly_chart(use_container_width=True, config={'displayModeBar': True, 'displaylogo': False})
+        chart_fig = render_tradingview_chart(df)
+        st.plotly_chart(chart_fig, use_container_width=True, config={'displayModeBar': True, 'displaylogo': False})
 
         with st.expander(f"📊 View Historical Data for {selected_display}"):
             st.dataframe(df.sort_values('date', ascending=False), use_container_width=True)
