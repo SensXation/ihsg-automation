@@ -72,13 +72,22 @@ def render_tradingview_chart(df, ma50, ma200):
     # Layout Styling
     fig.update_layout(
         margin=dict(l=10, r=10, t=10, b=10),
-        height=550,
+        height=600,
         template="plotly_dark",
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         hovermode='x unified',
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, bgcolor="rgba(0,0,0,0)"),
-        xaxis_rangeslider_visible=False
+        xaxis_rangeslider_visible=False,
+        modebar=dict(
+            orientation='h',      
+            yanchor='bottom',     
+            y=1,                  
+            xanchor='right',      
+            x=1,                  
+            bgcolor='rgba(0,0,0,0)', 
+            color='#ffffff'       
+        )
     )
     
     # Grid Styling
