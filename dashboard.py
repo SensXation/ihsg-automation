@@ -1,59 +1,158 @@
 import streamlit as st
-import pandas as pd
-from sqlalchemy import create_engine
-import plotly.express as px
-import toml
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from datetime import timedelta
 
-# 1. SETUP PAGE
-st.set_page_config(page_title="IHSG Automated Dashboard", layout="wide")
-st.title("🇮🇩 IHSG Stock Tracker (Automated)")
-st.markdown("This dashboard updates automatically every day via **GitHub Actions**.")
 
-# 2. CONNECT TO DATABASE
+import data_processor 
 
-try:
-    db_url = st.secrets["db_url"]
-    engine = create_engine(db_url)
+
+st.set_page_config(
+    page_title="IHSG Pro Dashboard",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+st.markdown("""
+<style>
+    /* Dark Theme Backgrounds */
+    .stApp { background-color: #0e1117; }
     
-    # 3. LOAD DATA
+    /* Sidebar styling */
+    section[data-testid="stSidebar"] { background-color: #161b22; }
     
-    query = """
-    SELECT date, ticker, close 
-    FROM daily_stock_prices 
-    ORDER BY date DESC
-    """
+    /* Metrics Styling */
+    div[data-testid="stMetricValue"] { font-size: 28px !important; }
     
-    with engine.connect() as conn:
-        df = pd.read_sql(query, conn)
+    /* Hide Plotly Modebar partially */
+    .modebar-container { opacity: 0.3 !important; }
+    .modebar-container:hover { opacity: 1 !important; }
+</style>
+""", unsafe_allow_html=True)
 
-    # 4. DASHBOARD VISUALS
-    if not df.empty:
-        # KPI Cards
-        col1, col2, col3 = st.columns(3)
-        latest_date = df['date'].max()
-        unique_stocks = df['ticker'].nunique()
-        total_rows = len(df)
-        
-        col1.metric("Last Update", str(latest_date))
-        col2.metric("Stocks Tracked", unique_stocks)
-        col3.metric("Total Data Points", total_rows)
 
-        # Interactive Chart
-        st.subheader("📈 Price Trends")
-        tickers = df['ticker'].unique()
-        selected = st.multiselect("Select Stocks", tickers, default=tickers[:2])
+def render_tradingview_chart(df, ma50, ma200):
+    """Function specifically to render TradingView-style charts"""
+   
+    # Calculate Moving Averages (Visual Only)
+    if ma50: df['MA50'] = df['close'].rolling(window=50).mean()
+    if ma200: df['MA200'] = df['close'].rolling(window=200).mean()
+
+    # Create Subplots
+    fig = make_subplots(
+        rows=2, cols=1, 
+        shared_xaxes=True, 
+        vertical_spacing=0.02, 
+        row_heights=[0.75, 0.25]
+    )
+
+    # Candlestick
+    fig.add_trace(go.Candlestick(
+        x=df['date'],
+        open=df['open'], high=df['high'], low=df['low'], close=df['close'],
+        name='Price',
+        increasing_line_color='#26a69a', 
+        decreasing_line_color='#ef5350', 
+        showlegend=False
+    ), row=1, col=1)
+
+    # Moving Averages
+    if ma50:
+        fig.add_trace(go.Scatter(x=df['date'], y=df['MA50'], line=dict(color='#FF9800', width=1.5), name='MA 50'), row=1, col=1)
+    if ma200:
+        fig.add_trace(go.Scatter(x=df['date'], y=df['MA200'], line=dict(color='#2196F3', width=1.5), name='MA 200'), row=1, col=1)
+
+    # Volume Bar
+    colors = ['#26a69a' if c >= o else '#ef5350' for c, o in zip(df['close'], df['open'])]
+    fig.add_trace(go.Bar(
+        x=df['date'], y=df['volume'], marker_color=colors, name='Volume', opacity=0.5, showlegend=False
+    ), row=2, col=1)
+
+    # Layout Styling
+    fig.update_layout(
+        margin=dict(l=10, r=10, t=10, b=10),
+        height=550,
+        template="plotly_dark",
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        hovermode='x unified',
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, bgcolor="rgba(0,0,0,0)"),
+        xaxis_rangeslider_visible=False
+    )
+    
+    # Grid Styling
+    fig.update_yaxes(gridcolor='#333333', row=1, col=1)
+    fig.update_yaxes(visible=False, row=2, col=1)
+    
+    return fig
+
+
+def main():
+  
+    st.sidebar.title("🔍 Market Scanner")
+    
+    # Call Data Processor: Get Ticker List
+    ticker_map = data_processor.get_ticker_list()
+    
+    if not ticker_map:
+        st.warning("Database Empty/Error.")
+        return
+
+    
+    display_names = list(ticker_map.keys())
+    selected_display = st.sidebar.selectbox("Select Stock", display_names)
+    selected_real_ticker = ticker_map[selected_display]
+
+    st.sidebar.subheader("Chart Settings")
+    time_range = st.sidebar.select_slider("Time Range", options=["1M", "3M", "6M", "1Y", "All"], value="6M")
+    col_ma1, col_ma2 = st.sidebar.columns(2)
+    show_ma50 = col_ma1.checkbox("MA 50", value=True)
+    show_ma200 = col_ma2.checkbox("MA 200", value=False)
+
+    try:
+        # Call Data Processor: Get Stock Data
+        df = data_processor.get_stock_data(selected_real_ticker)
         
-        if selected:
-            filtered_df = df[df['ticker'].isin(selected)]
-            fig = px.line(filtered_df, x='date', y='close', color='ticker', markers=True)
-            st.plotly_chart(fig, use_container_width=True)
+        # Date Filter Logic
+        if time_range != "All":
+            days_map = {"1M": 30, "3M": 90, "6M": 180, "1Y": 365}
+            start_date = df['date'].max() - timedelta(days=days_map[time_range])
+            df = df[df['date'] >= start_date]
+
+        # Call Data Processor: Calculate KPI
+        price, diff, pct, is_positive = data_processor.calculate_kpi(df)
         
-        # Data Table
-        with st.expander("View Raw Data"):
-            st.dataframe(df)
+        # --- DISPLAY KPI ---
+        last_date = df['date'].iloc[-1].strftime('%d %b %Y')
+        color_text = "#26a69a" if is_positive else "#ef5350"
+        
+        col1, col2, col3 = st.columns([1, 2, 4])
+        with col1:
+            st.markdown(f"<h1 style='margin:0; padding:0;'>{selected_display}</h1>", unsafe_allow_html=True)
+            st.caption(f"Last Updated: {last_date}")
+        with col2:
+            st.metric("Last Price", f"Rp {price:,.0f}")
+        with col3:
+            st.markdown(f"""
+            <div style="font-size: 14px; color: gray; margin-bottom: 0px;">Daily Change</div>
+            <div style="font-size: 26px; font-weight: bold; color: {color_text};">
+                {diff:,.0f} ({pct:.2f}%)
+            </div>
+            """, unsafe_allow_html=True)
             
-    else:
-        st.warning("No data found in database yet!")
+        st.divider()
 
-except Exception as e:
-    st.error(f"Error connecting to database: {e}")
+        # --- DISPLAY CHART ---
+        chart_fig = render_tradingview_chart(df, show_ma50, show_ma200)
+        st.plotly_chart(chart_fig, use_container_width=True)
+
+        # --- DISPLAY TABLE ---
+        with st.expander(f"📊 View Historical Data for {selected_display}"):
+            st.dataframe(df.sort_values('date', ascending=False), use_container_width=True)
+
+    except Exception as e:
+        st.error(f"Application error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
